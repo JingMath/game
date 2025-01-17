@@ -167,11 +167,12 @@
                     <option value="活期">活期</option>
                     <option value="定期">定期</option>
                 </select>
-                <input type="number" id="deposit-duration" placeholder="存期（天）" disabled>
+                <input type="number" id="deposit-duration" placeholder="存期（天）">
                 <button onclick="deposit()">存入银行</button>
                 <input type="number" id="withdraw-amount" placeholder="取款金额">
                 <button onclick="withdraw()">取款</button>
-                <p>银行余额: <span id="bank-balance">0.00</span>元</p>
+                <p>银行余额（活期）: <span id="current-balance">0.00</span>元</p>
+                <p>银行余额（定期）: <span id="fixed-balance">0.00</span>元</p>
                 <p>利息: 活期 0.1% / 天，定期 0.3% / 天</p>
             </div>
         </div>
@@ -190,34 +191,52 @@
     </div>
 
     <script>
+        // 获取当前日期作为种子值
+        const today = new Date().toISOString().split('T')[0]; // 格式：YYYY-MM-DD
         let balance = parseFloat(localStorage.getItem('balance')) || 100.00;
-        let bankBalance = parseFloat(localStorage.getItem('bankBalance')) || 0.00;
+        let currentBalance = parseFloat(localStorage.getItem('currentBalance')) || 0.00; // 活期余额
+        let fixedBalance = parseFloat(localStorage.getItem('fixedBalance')) || 0.00; // 定期余额
         let loanBalance = parseFloat(localStorage.getItem('loanBalance')) || 0.00;
         let purchasedTickets = JSON.parse(localStorage.getItem('purchasedTickets')) || [];
-        let lotteryResults = JSON.parse(localStorage.getItem('lotteryResults')) || generateLotteryResults();
+        let lotteryResults = JSON.parse(localStorage.getItem('lotteryResults')) || generateLotteryResults(today);
         let lastPurchaseDate = localStorage.getItem('lastPurchaseDate') || new Date().toDateString();
         let purchaseHistory = JSON.parse(localStorage.getItem('purchaseHistory')) || [];
         let bankHistory = JSON.parse(localStorage.getItem('bankHistory')) || [];
         let loanHistory = JSON.parse(localStorage.getItem('loanHistory')) || [];
         let interestRates = { 活期: 0.001, 定期: 0.003 }; // 利息率
 
-        function generateLotteryResults() {
+        // 基于日期生成彩票结果
+        function generateLotteryResults(seed) {
             let results = {};
+            const random = seededRandom(seed); // 使用种子初始化随机数生成器
             for (let i = 1; i <= 100; i++) {
-                results[i] = getRandomPrize();
+                results[i] = getRandomPrize(random);
             }
             localStorage.setItem('lotteryResults', JSON.stringify(results));
             return results;
         }
 
-        function getRandomPrize() {
+        // 基于种子生成随机数生成器
+        function seededRandom(seed) {
+            let x = 0;
+            for (let i = 0; i < seed.length; i++) {
+                x += seed.charCodeAt(i);
+            }
+            return () => {
+                x = Math.sin(x) * 10000;
+                return x - Math.floor(x);
+            };
+        }
+
+        // 基于随机数生成器获取奖项
+        function getRandomPrize(random) {
             const prizes = [2, 10, 20, 25, 50, 100, 10000];
             const probabilities = [0.2, 0.1, 0.05, 0.03, 0.02, 0.01, 0.0002];
-            const random = Math.random();
+            const rand = random();
             let cumulativeProbability = 0;
             for (let i = 0; i < prizes.length; i++) {
                 cumulativeProbability += probabilities[i];
-                if (random < cumulativeProbability) {
+                if (rand < cumulativeProbability) {
                     return prizes[i];
                 }
             }
@@ -230,8 +249,10 @@
         }
 
         function updateBankBalance() {
-            document.getElementById('bank-balance').textContent = bankBalance.toFixed(2);
-            localStorage.setItem('bankBalance', bankBalance.toFixed(2));
+            document.getElementById('current-balance').textContent = currentBalance.toFixed(2);
+            document.getElementById('fixed-balance').textContent = fixedBalance.toFixed(2);
+            localStorage.setItem('currentBalance', currentBalance.toFixed(2));
+            localStorage.setItem('fixedBalance', fixedBalance.toFixed(2));
         }
 
         function updateLoanBalance() {
@@ -259,28 +280,6 @@
                     ticket.addEventListener('click', () => purchaseTicket(i));
                 }
                 grid.appendChild(ticket);
-            }
-        }
-
-        function createConfetti() {
-            for (let i = 0; i < 50; i++) {
-                const confetti = document.createElement('div');
-                confetti.className = 'confetti';
-                confetti.style.left = `${Math.random() * 100}vw`;
-                confetti.style.animationDelay = `${Math.random()}s`;
-                document.body.appendChild(confetti);
-                setTimeout(() => confetti.remove(), 2000);
-            }
-        }
-
-        function createFireworks() {
-            for (let i = 0; i < 20; i++) {
-                const firework = document.createElement('div');
-                firework.className = 'fireworks';
-                firework.style.left = `${Math.random() * 100}vw`;
-                firework.style.top = `${Math.random() * 100}vh`;
-                document.body.appendChild(firework);
-                setTimeout(() => firework.remove(), 1000);
             }
         }
 
@@ -314,53 +313,6 @@
             renderLotteryGrid();
         }
 
-        function renderHistory() {
-            const historySection = document.getElementById('history-section');
-            historySection.innerHTML = '';
-
-            // 彩票记录
-            if (purchaseHistory.length > 0) {
-                const lotteryHeader = document.createElement('div');
-                lotteryHeader.textContent = '彩票记录:';
-                lotteryHeader.style.fontWeight = 'bold';
-                historySection.appendChild(lotteryHeader);
-                purchaseHistory.forEach(record => {
-                    const item = document.createElement('div');
-                    item.className = 'history-item';
-                    item.textContent = `时间: ${record.time}, 彩票: ${record.number}, 中奖金额: ${record.prize}元`;
-                    historySection.appendChild(item);
-                });
-            }
-
-            // 银行记录
-            if (bankHistory.length > 0) {
-                const bankHeader = document.createElement('div');
-                bankHeader.textContent = '银行记录:';
-                bankHeader.style.fontWeight = 'bold';
-                historySection.appendChild(bankHeader);
-                bankHistory.forEach(record => {
-                    const item = document.createElement('div');
-                    item.className = 'history-item';
-                    item.textContent = `时间: ${record.time}, 操作: ${record.type}, 金额: ${record.amount}元`;
-                    historySection.appendChild(item);
-                });
-            }
-
-            // 贷款记录
-            if (loanHistory.length > 0) {
-                const loanHeader = document.createElement('div');
-                loanHeader.textContent = '贷款记录:';
-                loanHeader.style.fontWeight = 'bold';
-                historySection.appendChild(loanHeader);
-                loanHistory.forEach(record => {
-                    const item = document.createElement('div');
-                    item.className = 'history-item';
-                    item.textContent = `时间: ${record.time}, 操作: ${record.type}, 金额: ${record.amount}元`;
-                    historySection.appendChild(item);
-                });
-            }
-        }
-
         function deposit() {
             const amountInput = document.getElementById('deposit-amount');
             const amount = parseFloat(amountInput.value);
@@ -383,7 +335,17 @@
 
             // 存款逻辑
             balance -= amount;
-            bankBalance += amount;
+            if (type === '活期') {
+                currentBalance += amount;
+            } else if (type === '定期') {
+                fixedBalance += amount;
+                setTimeout(() => {
+                    fixedBalance -= amount;
+                    balance += amount + amount * interestRates.定期 * duration;
+                    updateBalance();
+                    updateBankBalance();
+                }, duration * 24 * 60 * 60 * 1000);
+            }
             updateBalance();
             updateBankBalance();
 
@@ -396,20 +358,9 @@
             bankHistory.push(record);
             localStorage.setItem('bankHistory', JSON.stringify(bankHistory));
 
-            if (type === '定期') {
-                setTimeout(() => {
-                    bankBalance -= amount;
-                    balance += amount + amount * interestRates.定期 * duration;
-                    updateBalance();
-                    updateBankBalance();
-                }, duration * 24 * 60 * 60 * 1000);
-            }
-
             // 清空输入框
             amountInput.value = '';
-            if (type === '定期') {
-                document.getElementById('deposit-duration').value = '';
-            }
+            document.getElementById('deposit-duration').value = ''; // 清空存期输入框
         }
 
         function withdraw() {
@@ -421,13 +372,13 @@
                 alert("请输入有效的取款金额！");
                 return;
             }
-            if (amount > bankBalance) {
-                alert("取款金额不能超过银行余额！");
+            if (amount > currentBalance) {
+                alert("取款金额不能超过活期余额！");
                 return;
             }
 
             // 取款逻辑
-            bankBalance -= amount;
+            currentBalance -= amount;
             balance += amount;
             updateBalance();
             updateBankBalance();
@@ -445,48 +396,7 @@
             amountInput.value = '';
         }
 
-        function takeLoan() {
-            const amount = parseFloat(document.getElementById('loan-amount').value);
-            if (amount > 0) {
-                balance += amount;
-                loanBalance += amount;
-                updateBalance();
-                updateLoanBalance();
-
-                // 记录贷款操作
-                const record = {
-                    time: new Date().toLocaleString(),
-                    type: "贷款",
-                    amount: amount.toFixed(2)
-                };
-                loanHistory.push(record);
-                localStorage.setItem('loanHistory', JSON.stringify(loanHistory));
-            }
-        }
-
-        function repayLoan() {
-            const amount = parseFloat(document.getElementById('repay-amount').value);
-            if (amount > 0 && amount <= balance && amount <= loanBalance) {
-                balance -= amount;
-                loanBalance -= amount;
-                updateBalance();
-                updateLoanBalance();
-
-                // 记录还款操作
-                const record = {
-                    time: new Date().toLocaleString(),
-                    type: "还款",
-                    amount: amount.toFixed(2)
-                };
-                loanHistory.push(record);
-                localStorage.setItem('loanHistory', JSON.stringify(loanHistory));
-            }
-        }
-
-        document.getElementById('deposit-type').addEventListener('change', function () {
-            document.getElementById('deposit-duration').disabled = this.value !== '定期';
-        });
-
+        // 初始化
         updateBalance();
         updateBankBalance();
         updateLoanBalance();
