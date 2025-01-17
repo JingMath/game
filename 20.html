@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>二十杀</title>
+    <style>
+        /* 全局样式 */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 欢迎动画 */
+        .welcome-container {
+            text-align: center;
+            animation: fadeInOut 4s ease-in-out forwards;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(1); }
+        }
+
+        .welcome-text {
+            font-size: 3rem;
+            font-weight: bold;
+        }
+
+        /* 角色选择界面 */
+        .character-select {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .character-select h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+
+        .character-carousel {
+            display: flex;
+            overflow-x: scroll;
+            scroll-snap-type: x mandatory;
+            width: 90%;
+            height: 70%;
+            gap: 20px;
+            padding: 10px;
+            scroll-behavior: smooth;
+        }
+
+        .character-card {
+            scroll-snap-align: center;
+            min-width: 80%;
+            background-color: #333;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+
+        .character-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+        }
+
+        .character-card.selected {
+            background-color: #4CAF50;
+            animation: selectAnimation 0.5s ease;
+        }
+
+        @keyframes selectAnimation {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .character-card img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 3px solid #4CAF50;
+            transition: border-color 0.3s ease;
+        }
+
+        .character-card.selected img {
+            border-color: #ffeb3b;
+        }
+
+        .character-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        .character-info h2 {
+            font-size: 1.5rem;
+            margin: 0 0 10px;
+            color: #fff;
+        }
+
+        .character-info p {
+            font-size: 1rem;
+            color: #ccc;
+            margin: 0;
+        }
+
+        .next-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .next-button:hover {
+            background-color: #45a049;
+        }
+
+        .next-button:disabled {
+            background-color: #777;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <!-- 欢迎界面 -->
+    <div class="welcome-container">
+        <div class="welcome-text">欢迎来到二十杀</div>
+    </div>
+
+    <!-- 角色选择界面 -->
+    <div class="character-select">
+        <h2>点击选择角色</h2>
+        <div class="character-carousel">
+            <div class="character-card" data-name="大语文">
+                <img src="https://han2ban.wordpress.com/wp-content/uploads/2024/12/e5a4a7e8afade69687.jpg" alt="大语文">
+                <div class="character-info">
+                    <h2>大语文</h2>
+                    <p>技能：释放口疮，研发课前演讲，不说废话。</p>
+                </div>
+            </div>
+            <div class="character-card" data-name="大棉猴的敌人">
+                <img src="https://han2ban.wordpress.com/wp-content/uploads/2024/12/e59cb0e79086.jpg" alt="大棉猴的敌人">
+                <div class="character-info">
+                    <h2>大棉猴的敌人</h2>
+                    <p>技能：随机叫同学上讲台绘制图，是大棉猴的死敌。</p>
+                </div>
+            </div>
+            <div class="character-card" data-name="竣舒妈妈">
+                <img src="https://han2ban.wordpress.com/wp-content/uploads/2024/12/e59095e7919e.jpg" alt="竣舒妈妈">
+                <div class="character-info">
+                    <h2>竣舒妈妈</h2>
+                    <p>技能：奥特曼打怪兽。</p>
+                </div>
+            </div>
+            <div class="character-card" data-name="乐迪">
+                <img src="https://han2ban.wordpress.com/wp-content/uploads/2024/12/e4b990e8bfaa.jpg" alt="乐迪">
+                <div class="character-info">
+                    <h2>乐迪</h2>
+                    <p>技能：理学之美、同类题型3道起。</p>
+                </div>
+            </div>
+            <div class="character-card" data-name="礼帽">
+                <img src="https://han2ban.wordpress.com/wp-content/uploads/2024/12/e7a59e.jpg?w=768" alt="礼帽">
+                <div class="character-info">
+                    <h2>礼帽</h2>
+                    <p>技能：？？？</p>
+                </div>
+            </div>
+            <div class="character-card" data-name="<・)))><<">
+                <img src="https://han2ban.wordpress.com/wp-content/uploads/2024/12/e4ba8e.jpg" alt="<・)))><<">
+                <div class="character-info">
+                    <h2>&lt;・)))&gt;&lt;&lt;</h2>
+                    <p>技能：无法全对。</p>
+                </div>
+            </div>
+            <div class="character-card" data-name="阴阳大师">
+                <img src="https://han2ban.wordpress.com/wp-content/uploads/2024/12/e5ae87e7abb9e88ab3.jpg" alt="阴阳大师">
+                <div class="character-info">
+                    <h2>阴阳大师</h2>
+                    <p>技能：擅长对比。</p>
+                </div>
+            </div>
+            <div class="character-card" data-name="认真姐">
+                <img src="https://han2ban.wordpress.com/wp-content/uploads/2024/12/e694bfe6b2bb.jpg" alt="认真姐">
+                <div class="character-info">
+                    <h2>认真姐</h2>
+                    <p>技能：时政演讲。</p>
+                </div>
+            </div>
+            <div class="character-card" data-name="比亚迪">
+                <img src="https://han2ban.wordpress.com/wp-content/uploads/2024/12/byd.jpg" alt="比亚迪">
+                <div class="character-info">
+                    <h2>比亚迪</h2>
+                    <p>技能：默写。</p>
+                </div>
+            </div>
+        </div>
+        <button class="next-button" disabled>下一步</button>
+    </div>
+
+    <script>
+        // 欢迎动画结束后显示角色选择界面
+        setTimeout(() => {
+            document.querySelector('.welcome-container').style.display = 'none';
+            document.querySelector('.character-select').style.display = 'flex';
+        }, 4000); // 4秒后切换
+
+        // 角色选择逻辑
+        const characterCards = document.querySelectorAll('.character-card');
+        const nextButton = document.querySelector('.next-button');
+        let selectedCharacter = null;
+
+        characterCards.forEach(card => {
+            card.addEventListener('click', () => {
+                // 取消之前选中的角色
+                if (selectedCharacter) {
+                    selectedCharacter.classList.remove('selected');
+                }
+                // 选中当前角色
+                card.classList.add('selected');
+                selectedCharacter = card;
+                // 启用下一步按钮
+                nextButton.disabled = false;
+            });
+        });
+
+        // 下一步按钮点击事件
+        nextButton.addEventListener('click', () => {
+            if (selectedCharacter) {
+                alert(`你选择了：${selectedCharacter.getAttribute('data-name')}`);
+                // 这里可以跳转到游戏主界面
+            }
+        });
+    </script>
+</body>
+</html>
