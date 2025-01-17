@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>韩班彩票模拟网站</title>
+    <style>
+        /* 样式部分保持不变 */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        .balance {
+            font-size: 1.5em;
+            margin: 20px 0;
+        }
+        .navigation {
+            margin-top: 20px;
+        }
+        .navigation button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .navigation button:hover {
+            background-color: #0056b3;
+        }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        .lottery-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .lottery-item {
+            background-color: #007bff;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .lottery-item:hover {
+            transform: scale(1.1);
+        }
+        .lottery-item.disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin: 20px 0;
+            font-size: 1.2em;
+        }
+        .bank-section, .loan-section, .history-section {
+            margin-top: 20px;
+        }
+        .bank-section input, .loan-section input, .bank-section select {
+            padding: 5px;
+            margin-right: 10px;
+        }
+        .bank-section button, .loan-section button {
+            padding: 5px 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .bank-section button:hover, .loan-section button:hover {
+            background-color: #0056b3;
+        }
+        .loan-section button {
+            background-color: #dc3545;
+        }
+        .loan-section button:hover {
+            background-color: #c82333;
+        }
+        .history-section {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .history-item {
+            margin: 5px 0;
+            padding: 5px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        /* 中奖特效 */
+        @keyframes confetti {
+            0% { transform: translateY(0) rotate(0); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: #ff0;
+            animation: confetti 2s ease-out;
+        }
+        @keyframes fireworks {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        .fireworks {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            background-color: #f00;
+            border-radius: 50%;
+            animation: fireworks 1s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>韩班彩票模拟网站</h1>
+        <div class="balance">当前余额: <span id="balance">100.00</span>元</div>
+        <div class="navigation">
+            <button onclick="showPage('home')">首页</button>
+            <button onclick="showPage('lottery')">购买彩票</button>
+            <button onclick="showPage('bank')">银行</button>
+            <button onclick="showPage('loan')">贷款</button>
+            <button onclick="showPage('history')">历史记录</button>
+        </div>
+        <div id="home-page" class="page active">
+            <p>欢迎来到韩班彩票模拟网站！</p>
+        </div>
+        <div id="lottery-page" class="page">
+            <div class="lottery-grid" id="lottery-grid"></div>
+            <div class="result" id="result"></div>
+        </div>
+        <div id="bank-page" class="page">
+            <div class="bank-section">
+                <input type="number" id="deposit-amount" placeholder="存款金额">
+                <select id="deposit-type">
+                    <option value="活期">活期</option>
+                    <option value="定期">定期</option>
+                </select>
+                <input type="number" id="deposit-duration" placeholder="存期（天）" disabled>
+                <button onclick="deposit()">存入银行</button>
+                <input type="number" id="withdraw-amount" placeholder="取款金额">
+                <button onclick="withdraw()">取款</button>
+                <p>银行余额: <span id="bank-balance">0.00</span>元</p>
+                <p>利息: 活期 0.1% / 天，定期 0.3% / 天</p>
+            </div>
+        </div>
+        <div id="loan-page" class="page">
+            <div class="loan-section">
+                <input type="number" id="loan-amount" placeholder="贷款金额">
+                <button onclick="takeLoan()">贷款</button>
+                <p>欠款金额: <span id="loan-balance">0.00</span>元</p>
+                <input type="number" id="repay-amount" placeholder="还款金额">
+                <button onclick="repayLoan()">还款</button>
+            </div>
+        </div>
+        <div id="history-page" class="page">
+            <div class="history-section" id="history-section"></div>
+        </div>
+    </div>
+
+    <script>
+        let balance = parseFloat(localStorage.getItem('balance')) || 100.00;
+        let bankBalance = parseFloat(localStorage.getItem('bankBalance')) || 0.00;
+        let loanBalance = parseFloat(localStorage.getItem('loanBalance')) || 0.00;
+        let purchasedTickets = JSON.parse(localStorage.getItem('purchasedTickets')) || [];
+        let lotteryResults = JSON.parse(localStorage.getItem('lotteryResults')) || generateLotteryResults();
+        let lastPurchaseDate = localStorage.getItem('lastPurchaseDate') || new Date().toDateString();
+        let purchaseHistory = JSON.parse(localStorage.getItem('purchaseHistory')) || [];
+        let bankHistory = JSON.parse(localStorage.getItem('bankHistory')) || [];
+        let loanHistory = JSON.parse(localStorage.getItem('loanHistory')) || [];
+        let interestRates = { 活期: 0.001, 定期: 0.003 }; // 利息率
+
+        function generateLotteryResults() {
+            let results = {};
+            for (let i = 1; i <= 100; i++) {
+                results[i] = getRandomPrize();
+            }
+            localStorage.setItem('lotteryResults', JSON.stringify(results));
+            return results;
+        }
+
+        function getRandomPrize() {
+            const prizes = [2, 10, 20, 25, 50, 100, 10000];
+            const probabilities = [0.2, 0.1, 0.05, 0.03, 0.02, 0.01, 0.0002];
+            const random = Math.random();
+            let cumulativeProbability = 0;
+            for (let i = 0; i < prizes.length; i++) {
+                cumulativeProbability += probabilities[i];
+                if (random < cumulativeProbability) {
+                    return prizes[i];
+                }
+            }
+            return 0; // 未中奖
+        }
+
+        function updateBalance() {
+            document.getElementById('balance').textContent = balance.toFixed(2);
+            localStorage.setItem('balance', balance.toFixed(2));
+        }
+
+        function updateBankBalance() {
+            document.getElementById('bank-balance').textContent = bankBalance.toFixed(2);
+            localStorage.setItem('bankBalance', bankBalance.toFixed(2));
+        }
+
+        function updateLoanBalance() {
+            document.getElementById('loan-balance').textContent = loanBalance.toFixed(2);
+            localStorage.setItem('loanBalance', loanBalance.toFixed(2));
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId + '-page').classList.add('active');
+            if (pageId === 'lottery') renderLotteryGrid();
+            if (pageId === 'history') renderHistory();
+        }
+
+        function renderLotteryGrid() {
+            const grid = document.getElementById('lottery-grid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= 100; i++) {
+                const ticket = document.createElement('div');
+                ticket.className = 'lottery-item';
+                ticket.textContent = i;
+                if (purchasedTickets.length >= 5 || purchasedTickets.includes(i) || balance < 2) {
+                    ticket.classList.add('disabled');
+                } else {
+                    ticket.addEventListener('click', () => purchaseTicket(i));
+                }
+                grid.appendChild(ticket);
+            }
+        }
+
+        function createConfetti() {
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = `${Math.random() * 100}vw`;
+                confetti.style.animationDelay = `${Math.random()}s`;
+                document.body.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 2000);
+            }
+        }
+
+        function createFireworks() {
+            for (let i = 0; i < 20; i++) {
+                const firework = document.createElement('div');
+                firework.className = 'fireworks';
+                firework.style.left = `${Math.random() * 100}vw`;
+                firework.style.top = `${Math.random() * 100}vh`;
+                document.body.appendChild(firework);
+                setTimeout(() => firework.remove(), 1000);
+            }
+        }
+
+        function purchaseTicket(number) {
+            if (purchasedTickets.length >= 5 || purchasedTickets.includes(number) || balance < 2) return;
+            if (new Date().toDateString() !== lastPurchaseDate) {
+                purchasedTickets = [];
+                lastPurchaseDate = new Date().toDateString();
+                localStorage.setItem('lastPurchaseDate', lastPurchaseDate);
+            }
+            balance -= 2;
+            purchasedTickets.push(number);
+            localStorage.setItem('purchasedTickets', JSON.stringify(purchasedTickets));
+            updateBalance();
+            const prize = lotteryResults[number];
+            const purchaseTime = new Date().toLocaleString();
+            purchaseHistory.push({ number, prize, time: purchaseTime });
+            localStorage.setItem('purchaseHistory', JSON.stringify(purchaseHistory));
+            if (prize > 0) {
+                balance += prize;
+                updateBalance();
+                document.getElementById('result').textContent = `恭喜你中奖了！获得${prize}元！`;
+                if (prize >= 100) {
+                    createFireworks();
+                } else {
+                    createConfetti();
+                }
+            } else {
+                document.getElementById('result').textContent = '很遗憾，未中奖。';
+            }
+            renderLotteryGrid();
+        }
+
+        function renderHistory() {
+            const historySection = document.getElementById('history-section');
+            historySection.innerHTML = '';
+
+            // 彩票记录
+            if (purchaseHistory.length > 0) {
+                const lotteryHeader = document.createElement('div');
+                lotteryHeader.textContent = '彩票记录:';
+                lotteryHeader.style.fontWeight = 'bold';
+                historySection.appendChild(lotteryHeader);
+                purchaseHistory.forEach(record => {
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    item.textContent = `时间: ${record.time}, 彩票: ${record.number}, 中奖金额: ${record.prize}元`;
+                    historySection.appendChild(item);
+                });
+            }
+
+            // 银行记录
+            if (bankHistory.length > 0) {
+                const bankHeader = document.createElement('div');
+                bankHeader.textContent = '银行记录:';
+                bankHeader.style.fontWeight = 'bold';
+                historySection.appendChild(bankHeader);
+                bankHistory.forEach(record => {
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    item.textContent = `时间: ${record.time}, 操作: ${record.type}, 金额: ${record.amount}元`;
+                    historySection.appendChild(item);
+                });
+            }
+
+            // 贷款记录
+            if (loanHistory.length > 0) {
+                const loanHeader = document.createElement('div');
+                loanHeader.textContent = '贷款记录:';
+                loanHeader.style.fontWeight = 'bold';
+                historySection.appendChild(loanHeader);
+                loanHistory.forEach(record => {
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    item.textContent = `时间: ${record.time}, 操作: ${record.type}, 金额: ${record.amount}元`;
+                    historySection.appendChild(item);
+                });
+            }
+        }
+
+        function deposit() {
+            const amountInput = document.getElementById('deposit-amount');
+            const amount = parseFloat(amountInput.value);
+            const type = document.getElementById('deposit-type').value;
+            const duration = type === '定期' ? parseInt(document.getElementById('deposit-duration').value) : 0;
+
+            // 输入验证
+            if (isNaN(amount) || amount <= 0) {
+                alert("请输入有效的存款金额！");
+                return;
+            }
+            if (amount > balance) {
+                alert("存款金额不能超过当前余额！");
+                return;
+            }
+            if (type === '定期' && (isNaN(duration) || duration <= 0)) {
+                alert("请输入有效的存期！");
+                return;
+            }
+
+            // 存款逻辑
+            balance -= amount;
+            bankBalance += amount;
+            updateBalance();
+            updateBankBalance();
+
+            // 记录银行操作
+            const record = {
+                time: new Date().toLocaleString(),
+                type: `存入${type}存款`,
+                amount: amount.toFixed(2)
+            };
+            bankHistory.push(record);
+            localStorage.setItem('bankHistory', JSON.stringify(bankHistory));
+
+            if (type === '定期') {
+                setTimeout(() => {
+                    bankBalance -= amount;
+                    balance += amount + amount * interestRates.定期 * duration;
+                    updateBalance();
+                    updateBankBalance();
+                }, duration * 24 * 60 * 60 * 1000);
+            }
+
+            // 清空输入框
+            amountInput.value = '';
+            if (type === '定期') {
+                document.getElementById('deposit-duration').value = '';
+            }
+        }
+
+        function withdraw() {
+            const amountInput = document.getElementById('withdraw-amount');
+            const amount = parseFloat(amountInput.value);
+
+            // 输入验证
+            if (isNaN(amount) || amount <= 0) {
+                alert("请输入有效的取款金额！");
+                return;
+            }
+            if (amount > bankBalance) {
+                alert("取款金额不能超过银行余额！");
+                return;
+            }
+
+            // 取款逻辑
+            bankBalance -= amount;
+            balance += amount;
+            updateBalance();
+            updateBankBalance();
+
+            // 记录银行操作
+            const record = {
+                time: new Date().toLocaleString(),
+                type: "取款",
+                amount: amount.toFixed(2)
+            };
+            bankHistory.push(record);
+            localStorage.setItem('bankHistory', JSON.stringify(bankHistory));
+
+            // 清空输入框
+            amountInput.value = '';
+        }
+
+        function takeLoan() {
+            const amount = parseFloat(document.getElementById('loan-amount').value);
+            if (amount > 0) {
+                balance += amount;
+                loanBalance += amount;
+                updateBalance();
+                updateLoanBalance();
+
+                // 记录贷款操作
+                const record = {
+                    time: new Date().toLocaleString(),
+                    type: "贷款",
+                    amount: amount.toFixed(2)
+                };
+                loanHistory.push(record);
+                localStorage.setItem('loanHistory', JSON.stringify(loanHistory));
+            }
+        }
+
+        function repayLoan() {
+            const amount = parseFloat(document.getElementById('repay-amount').value);
+            if (amount > 0 && amount <= balance && amount <= loanBalance) {
+                balance -= amount;
+                loanBalance -= amount;
+                updateBalance();
+                updateLoanBalance();
+
+                // 记录还款操作
+                const record = {
+                    time: new Date().toLocaleString(),
+                    type: "还款",
+                    amount: amount.toFixed(2)
+                };
+                loanHistory.push(record);
+                localStorage.setItem('loanHistory', JSON.stringify(loanHistory));
+            }
+        }
+
+        document.getElementById('deposit-type').addEventListener('change', function () {
+            document.getElementById('deposit-duration').disabled = this.value !== '定期';
+        });
+
+        updateBalance();
+        updateBankBalance();
+        updateLoanBalance();
+        showPage('home');
+    </script>
+</body>
+</html>
