@@ -2,10 +2,10 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>韩班彩票模拟网站</title>
     <style>
-        /* 样式部分保持不变 */
+        /* 通用样式 */
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
@@ -140,6 +140,20 @@
             border-radius: 50%;
             animation: fireworks 1s ease-out;
         }
+
+        /* 手机端优化 */
+        @media (max-width: 600px) {
+            .lottery-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+            .navigation button {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            .container {
+                padding: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -174,6 +188,7 @@
                 <p>银行余额（活期）: <span id="current-balance">0.00</span>元</p>
                 <p>银行余额（定期）: <span id="fixed-balance">0.00</span>元</p>
                 <p>利息: 活期 0.1% / 天，定期 0.3% / 天</p>
+                <p>活期可提取金额（含利息）: <span id="current-with-interest">0.00</span>元</p>
             </div>
         </div>
         <div id="loan-page" class="page">
@@ -204,6 +219,37 @@
         let bankHistory = JSON.parse(localStorage.getItem('bankHistory')) || [];
         let loanHistory = JSON.parse(localStorage.getItem('loanHistory')) || [];
         let interestRates = { 活期: 0.001, 定期: 0.003 }; // 利息率
+        let lastDepositTime = localStorage.getItem('lastDepositTime') || new Date().toISOString(); // 记录上次存款时间
+        let lastRefreshDate = localStorage.getItem('lastRefreshDate') || today; // 记录上次刷新日期
+
+        // 每天零点刷新彩票结果和重置用户可购买的彩票数量
+        function checkAndRefreshLottery() {
+            const now = new Date();
+            const todayDate = now.toISOString().split('T')[0];
+            if (todayDate !== lastRefreshDate) {
+                // 刷新彩票结果
+                lotteryResults = generateLotteryResults(todayDate);
+                purchasedTickets = []; // 清空已购买的彩票
+                lastPurchaseDate = now.toDateString();
+                lastRefreshDate = todayDate;
+                localStorage.setItem('lotteryResults', JSON.stringify(lotteryResults));
+                localStorage.setItem('purchasedTickets', JSON.stringify(purchasedTickets));
+                localStorage.setItem('lastPurchaseDate', lastPurchaseDate);
+                localStorage.setItem('lastRefreshDate', lastRefreshDate);
+            }
+        }
+
+        // 初始化彩票购买状态
+        function initializeLotteryPurchase() {
+            const now = new Date();
+            const todayDate = now.toDateString();
+            if (todayDate !== lastPurchaseDate) {
+                purchasedTickets = []; // 重置已购买的彩票
+                lastPurchaseDate = todayDate;
+                localStorage.setItem('purchasedTickets', JSON.stringify(purchasedTickets));
+                localStorage.setItem('lastPurchaseDate', lastPurchaseDate);
+            }
+        }
 
         // 基于日期生成彩票结果
         function generateLotteryResults(seed) {
@@ -212,7 +258,6 @@
             for (let i = 1; i <= 100; i++) {
                 results[i] = getRandomPrize(random);
             }
-            localStorage.setItem('lotteryResults', JSON.stringify(results));
             return results;
         }
 
@@ -253,6 +298,7 @@
             document.getElementById('fixed-balance').textContent = fixedBalance.toFixed(2);
             localStorage.setItem('currentBalance', currentBalance.toFixed(2));
             localStorage.setItem('fixedBalance', fixedBalance.toFixed(2));
+            updateCurrentWithInterest(); // 更新活期可提取金额
         }
 
         function updateLoanBalance() {
@@ -260,11 +306,23 @@
             localStorage.setItem('loanBalance', loanBalance.toFixed(2));
         }
 
+        // 计算活期可提取金额（含利息）
+        function updateCurrentWithInterest() {
+            const now = new Date();
+            const lastDeposit = new Date(lastDepositTime);
+            const timeDiff = now - lastDeposit; // 时间差（毫秒）
+            const daysDiff = timeDiff / (1000 * 60 * 60 * 24); // 转换为天数
+            const interest = currentBalance * interestRates.活期 * daysDiff; // 计算利息
+            const totalWithInterest = currentBalance + interest; // 活期余额 + 利息
+            document.getElementById('current-with-interest').textContent = totalWithInterest.toFixed(2);
+        }
+
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
             document.getElementById(pageId + '-page').classList.add('active');
             if (pageId === 'lottery') renderLotteryGrid();
             if (pageId === 'history') renderHistory();
+            if (pageId === 'bank') updateCurrentWithInterest(); // 切换到银行页面时更新可提取金额
         }
 
         function renderLotteryGrid() {
@@ -286,7 +344,7 @@
         function purchaseTicket(number) {
             if (purchasedTickets.length >= 5 || purchasedTickets.includes(number) || balance < 2) return;
             if (new Date().toDateString() !== lastPurchaseDate) {
-                purchasedTickets = [];
+                purchasedTickets = []; // 重置已购买的彩票
                 lastPurchaseDate = new Date().toDateString();
                 localStorage.setItem('lastPurchaseDate', lastPurchaseDate);
             }
@@ -310,7 +368,7 @@
             } else {
                 document.getElementById('result').textContent = '很遗憾，未中奖。';
             }
-            renderLotteryGrid();
+            renderLotteryGrid(); // 重新渲染彩票网格，确保禁用状态正确显示
         }
 
         function deposit() {
@@ -337,6 +395,8 @@
             balance -= amount;
             if (type === '活期') {
                 currentBalance += amount;
+                lastDepositTime = new Date().toISOString(); // 更新存款时间
+                localStorage.setItem('lastDepositTime', lastDepositTime);
             } else if (type === '定期') {
                 fixedBalance += amount;
                 setTimeout(() => {
@@ -367,19 +427,28 @@
             const amountInput = document.getElementById('withdraw-amount');
             const amount = parseFloat(amountInput.value);
 
+            // 计算活期可提取金额（含利息）
+            const now = new Date();
+            const lastDeposit = new Date(lastDepositTime);
+            const timeDiff = now - lastDeposit; // 时间差（毫秒）
+            const daysDiff = timeDiff / (1000 * 60 * 60 * 24); // 转换为天数
+            const interest = currentBalance * interestRates.活期 * daysDiff; // 计算利息
+            const totalWithInterest = currentBalance + interest; // 活期余额 + 利息
+
             // 输入验证
             if (isNaN(amount) || amount <= 0) {
                 alert("请输入有效的取款金额！");
                 return;
             }
-            if (amount > currentBalance) {
-                alert("取款金额不能超过活期余额！");
+            if (amount > totalWithInterest) {
+                alert("取款金额不能超过活期可提取金额！");
                 return;
             }
 
             // 取款逻辑
-            currentBalance -= amount;
-            balance += amount;
+            const actualWithdrawAmount = Math.min(amount, totalWithInterest); // 确保取款金额不超过可提取金额
+            currentBalance -= actualWithdrawAmount;
+            balance += actualWithdrawAmount;
             updateBalance();
             updateBankBalance();
 
@@ -387,7 +456,7 @@
             const record = {
                 time: new Date().toLocaleString(),
                 type: "取款",
-                amount: amount.toFixed(2)
+                amount: actualWithdrawAmount.toFixed(2)
             };
             bankHistory.push(record);
             localStorage.setItem('bankHistory', JSON.stringify(bankHistory));
@@ -396,7 +465,102 @@
             amountInput.value = '';
         }
 
+        function takeLoan() {
+            const amountInput = document.getElementById('loan-amount');
+            const amount = parseFloat(amountInput.value);
+
+            // 输入验证
+            if (isNaN(amount) || amount <= 0) {
+                alert("请输入有效的贷款金额！");
+                return;
+            }
+
+            // 贷款逻辑
+            loanBalance += amount;
+            balance += amount;
+            updateBalance();
+            updateLoanBalance();
+
+            // 记录贷款操作
+            const record = {
+                time: new Date().toLocaleString(),
+                type: "贷款",
+                amount: amount.toFixed(2)
+            };
+            loanHistory.push(record);
+            localStorage.setItem('loanHistory', JSON.stringify(loanHistory));
+
+            // 清空输入框
+            amountInput.value = '';
+        }
+
+        function repayLoan() {
+            const amountInput = document.getElementById('repay-amount');
+            const amount = parseFloat(amountInput.value);
+
+            // 输入验证
+            if (isNaN(amount) || amount <= 0) {
+                alert("请输入有效的还款金额！");
+                return;
+            }
+            if (amount > balance) {
+                alert("还款金额不能超过当前余额！");
+                return;
+            }
+            if (amount > loanBalance) {
+                alert("还款金额不能超过欠款金额！");
+                return;
+            }
+
+            // 还款逻辑
+            loanBalance -= amount;
+            balance -= amount;
+            updateBalance();
+            updateLoanBalance();
+
+            // 记录还款操作
+            const record = {
+                time: new Date().toLocaleString(),
+                type: "还款",
+                amount: amount.toFixed(2)
+            };
+            loanHistory.push(record);
+            localStorage.setItem('loanHistory', JSON.stringify(loanHistory));
+
+            // 清空输入框
+            amountInput.value = '';
+        }
+
+        // 渲染历史记录
+        function renderHistory() {
+            const historySection = document.getElementById('history-section');
+            historySection.innerHTML = '';
+
+            // 合并所有历史记录
+            const allHistory = [
+                ...purchaseHistory.map(item => ({ ...item, type: '购买彩票', amount: item.prize })),
+                ...bankHistory,
+                ...loanHistory
+            ];
+
+            // 按时间排序
+            allHistory.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+            // 显示历史记录
+            allHistory.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.textContent = `${item.time} - ${item.type}: ${item.amount}元`;
+                if (item.number) {
+                    historyItem.textContent += ` (彩票号码: ${item.number})`;
+                }
+                historySection.appendChild(historyItem);
+            });
+        }
+
         // 初始化
+        checkAndRefreshLottery(); // 检查并刷新彩票结果
+        initializeLotteryPurchase(); // 初始化彩票购买状态
         updateBalance();
         updateBankBalance();
         updateLoanBalance();
