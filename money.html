@@ -332,7 +332,9 @@
                 const ticket = document.createElement('div');
                 ticket.className = 'lottery-item';
                 ticket.textContent = i;
-                if (purchasedTickets.length >= 5 || purchasedTickets.includes(i) || balance < 2) {
+                if (purchasedTickets.includes(i)) {
+                    ticket.classList.add('disabled');
+                } else if (balance < 2 || purchasedTickets.length >= 5) {
                     ticket.classList.add('disabled');
                 } else {
                     ticket.addEventListener('click', () => purchaseTicket(i));
@@ -342,7 +344,7 @@
         }
 
         function purchaseTicket(number) {
-            if (purchasedTickets.length >= 5 || purchasedTickets.includes(number) || balance < 2) return;
+            if (purchasedTickets.includes(number) || balance < 2 || purchasedTickets.length >= 5) return;
             if (new Date().toDateString() !== lastPurchaseDate) {
                 purchasedTickets = []; // 重置已购买的彩票
                 lastPurchaseDate = new Date().toDateString();
