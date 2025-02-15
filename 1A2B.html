@@ -923,6 +923,8 @@
         function restartGame() {
             lastGameTime = formatTime(elapsedTime);
             lastGameResult = isGameOver ? "回答正确！" : "未猜出答案";
+            const correctAnswer = targetNumber;
+            showModal(`上一局用时：${lastGameTime}\n结果：${lastGameResult}\n正确答案：${correctAnswer}`);
             if (gameMode === 'single') {
                 targetNumber = generateTargetNumber(digitCount);
             }
