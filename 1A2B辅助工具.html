@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1A2B 智能助手</title>
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --secondary-color: #4CAF50;
+            --background: #f8f9fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            background: var(--background);
+            line-height: 1.6;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        select, button {
+            padding: 12px 18px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .game-panel {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-top: 20px;
+        }
+
+        .guess-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f4f4f4;
+            border-radius: 8px;
+        }
+
+        .feedback-input {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .feedback-input input {
+            width: 70px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .history-panel {
+            margin-top: 25px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .history-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: var(--background);
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.2s;
+        }
+
+        .history-item:hover {
+            transform: translateX(5px);
+        }
+
+        .stats {
+            color: #666;
+            font-size: 0.9em;
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        @media (max-width: 480px) {
+            .input-group {
+                flex-direction: column;
+            }
+            
+            select, button {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .feedback-input {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎮 1A2B 智能助手</h1>
+        <p>基于AI算法的高效猜数助手</p >
+    </div>
+
+    <div class="input-group">
+        <select id="digits">
+            <option value="4">4位数字</option>
+            <option value="5">5位数字</option>
+            <option value="6">6位数字</option>
+            <option value="7">7位数字</option>
+            <option value="8">8位数字</option>
+            <option value="9">9位数字</option>
+            <option value="10">10位数字</option>
+        </select>
+        <button onclick="initializeGame()">
+            <span>🚀 开始游戏</span>
+        </button>
+    </div>
+
+    <div id="gamePanel" class="game-panel" style="display: none;">
+        <div class="guess-display" id="currentGuess"></div>
+        
+        <div class="feedback-input">
+            <input type="number" id="a" min="0" placeholder="A" aria-label="A值">
+            <span style="font-size: 1.2em">A</span>
+            <input type="number" id="b" min="0" placeholder="B" aria-label="B值">
+            <span style="font-size: 1.2em">B</span>
+            <button onclick="processFeedback()">📤 提交</button>
+        </div>
+
+        <div class="stats" id="stats">剩余可能性：加载中...</div>
+
+        <div class="history-panel">
+            <h3>📜 历史记录</h3>
+            <div id="history"></div>
+        </div>
+    </div>
+
+    <script>
+        let candidates = [];
+        let currentGuess = '';
+        let steps = 0;
+        let digitCount = 4;
+
+        function generateCandidates(n) {
+            const result = [];
+            const digits = '0123456789';
+            
+            function backtrack(current) {
+                if (current.length === n) {
+                    result.push(current);
+                    return;
+                }
+                for (const d of digits) {
+                    if (!current.includes(d)) {
+                        backtrack(current + d);
+                    }
+                }
+            }
+            
+            backtrack('');
+            return result;
+        }
+
+        function calculateAB(guess, target) {
+            let a = 0, b = 0;
+            const count = {};
+            
+            for (let i = 0; i < guess.length; i++) {
+                if (guess[i] === target[i]) {
+                    a++;
+                } else {
+                    count[target[i]] = (count[target[i]] || 0) + 1;
+                }
+            }
+
+            for (let i = 0; i < guess.length; i++) {
+                if (guess[i] !== target[i] && count[guess[i]] > 0) {
+                    b++;
+                    count[guess[i]]--;
+                }
+            }
+
+            return { a, b };
+        }
+
+        function getOptimalGuess(candidates) {
+            if (candidates.length === 0) return '';
+            if (candidates.length === 1) return candidates[0];
+            
+            let bestGuess = candidates[0];
+            let minMax = Infinity;
+            const checkLimit = Math.min(100, candidates.length);
+
+            for (let i = 0; i < checkLimit; i++) {
+                const guess = candidates[i];
+                const groups = new Map();
+
+                for (const candidate of candidates) {
+                    const { a, b } = calculateAB(guess, candidate);
+                    const key = `${a}_${b}`;
+                    groups.set(key, (groups.get(key) || 0) + 1);
+                }
+
+                const currentMax = Math.max(...groups.values());
+                if (currentMax < minMax || 
+                   (currentMax === minMax && candidates.includes(guess))) {
+                    minMax = currentMax;
+                    bestGuess = guess;
+                }
+            }
+
+            return bestGuess;
+        }
+
+        function initializeGame() {
+            digitCount = parseInt(document.getElementById('digits').value);
+            candidates = generateCandidates(digitCount);
+            steps = 0;
+            
+            // 生成更优化的初始猜测
+            currentGuess = Array.from({length: digitCount}, (_, i) => i).join('');
+            
+            document.getElementById('gamePanel').style.display = 'block';
+            document.getElementById('history').innerHTML = '';
+            updateDisplay();
+        }
+
+        function processFeedback() {
+            const a = parseInt(document.getElementById('a').value);
+            const b = parseInt(document.getElementById('b').value);
+            
+            // 加强输入验证
+            if (isNaN(a) || isNaN(b) || a < 0 || b < 0 || 
+                a > digitCount || b > digitCount || a + b > digitCount) {
+                alert(`请输入有效的数值（0 ≤ A,B ≤ ${digitCount} 且 A+B ≤ ${digitCount}）`);
+                return;
+            }
+
+            // 先计算临时候选集
+            const tempCandidates = candidates.filter(c => {
+                const res = calculateAB(currentGuess, c);
+                return res.a === a && res.b === b;
+            });
+
+            // 检查是否无候选
+            if (tempCandidates.length === 0) {
+                alert("⚠️ 没有符合条件的数字，请确认反馈是否正确");
+                return; // 不修改任何状态
+            }
+
+            // 更新正式候选集
+            candidates = tempCandidates;
+            
+            // 添加历史记录
+            const history = document.getElementById('history');
+            history.innerHTML = `
+                <div class="history-item">
+                    <span>#${++steps} ➔ ${currentGuess}</span>
+                    <span style="color: var(--primary-color)">${a}A${b}B</span>
+                </div>
+            ` + history.innerHTML;
+
+            // 更新统计信息
+            document.getElementById('stats').textContent = 
+                `剩余可能性：${candidates.length} 种`;
+
+            // 检查游戏结果
+            if (a === digitCount) {
+                alert(`🎉 成功猜中！数字是 ${currentGuess}\n共使用 ${steps} 步`);
+                initializeGame();
+                return;
+            }
+
+            // 选择下一个猜测
+            currentGuess = getOptimalGuess(candidates);
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            document.getElementById('currentGuess').innerHTML = `
+                ${currentGuess.split('').join('<span style="margin: 0 2px">')}
+            `;
+            document.getElementById('a').value = '';
+            document.getElementById('b').value = '';
+            document.getElementById('stats').textContent = 
+                `剩余可能性：${candidates.length} 种`;
+        }
+    </script>
+</body>
+</html>
