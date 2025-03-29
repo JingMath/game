@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>拖拽物理小球</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.18.0/matter.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            touch-action: none;
+        }
+
+        #toolbox {
+            width: 50%;
+            background: #f0f0f0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .ball {
+            width: 50px;
+            height: 50px;
+            background: #3498db;
+            border-radius: 100%;
+            touch-action: none;
+            cursor: move;
+        }
+
+        #container {
+            flex: 1;
+            position: relative;
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .dragging {
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div id="toolbox">
+        <div class="ball"></div>
+        <div class="ball"></div>
+        <div class="ball"></div>
+    </div>
+    <div id="container">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        // 初始化该网页的物理引擎
+        const Engine = Matter.Engine,
+            Render = Matter.Render,
+            World = Matter.World,
+            Bodies = Matter.Bodies,
+            Composite = Matter.Composite,
+            Events = Matter.Events;
+
+        const engine = Engine.create();
+        engine.gravity.y = 0.5; // 设置重力函数大小
+
+        // 初始化该网页的渲染器
+        const render = Render.create({
+            canvas: document.getElementById('canvas'),
+            engine: engine,
+            options: {
+                width: document.getElementById('container').clientWidth,
+                height: document.getElementById('container').clientHeight,
+                wireframes: false
+            }
+        });
+
+        // 创建容器边界大小
+        const containerWidth = render.options.width;
+        const containerHeight = render.options.height;
+        const thickness = 30; // 边界厚度函数
+
+        const boundaries = [
+            Bodies.rectangle(containerWidth/2, -thickness/2, containerWidth, thickness, { 
+                isStatic: true,
+                render: { fillStyle: '#2c3e50' }
+            }), // 顶部
+            Bodies.rectangle(-thickness/2, containerHeight/2, thickness, containerHeight, { 
+                isStatic: true,
+                render: { fillStyle: '#2c3e50' }
+            }), // 左侧
+            Bodies.rectangle(containerWidth/2, containerHeight + thickness/2, containerWidth, thickness, { 
+                isStatic: true,
+                render: { fillStyle: '#2c3e50' }
+            }), // 底部
+            Bodies.rectangle(containerWidth + thickness/2, containerHeight/2, thickness, containerHeight, { 
+                isStatic: true,
+                render: { fillStyle: '#2c3e50' }
+            })  // 右侧
+        ];
+
+        World.add(engine.world, boundaries);
+
+        // 运行引擎
+        Engine.run(engine);
+        Render.run(render);
+
+        // 处理触摸事件
+        let dragging = null;
+        let currentBall = null;
+
+        document.querySelectorAll('.ball').forEach(ball => {
+            ball.addEventListener('touchstart', onTouchStart);
+            ball.addEventListener('touchend', onTouchEnd);
+        });
+
+        document.addEventListener('touchmove', onTouchMove);
+
+        function onTouchStart(e) {
+            e.preventDefault();
+            dragging = e.target;
+            dragging.classList.add('dragging');
+            
+            // 创建临时元素
+            currentBall = document.createElement('div');
+            currentBall.className = 'ball';
+            currentBall.style.position = 'fixed';
+            currentBall.style.pointerEvents = 'none';
+            document.body.appendChild(currentBall);
+            
+            updatePosition(currentBall, e.touches[0]);
+        }
+
+        function onTouchMove(e) {
+            e.preventDefault();
+            if (!dragging) return;
+            updatePosition(currentBall, e.touches[0]);
+        }
+
+        function onTouchEnd(e) {
+            if (!dragging) return;
+            
+            dragging.classList.remove('dragging');
+            document.body.removeChild(currentBall);
+            
+            const touch = e.changedTouches[0];
+            const rect = document.getElementById('container').getBoundingClientRect();
+            
+            // 检查小球是否在容器内
+            if (touch.clientX > rect.left && touch.clientX < rect.right &&
+                touch.clientY > rect.top && touch.clientY < rect.bottom) {
+                
+                // 创建物理小球
+                const ball = Bodies.circle(
+                    touch.clientX - rect.left,
+                    touch.clientY - rect.top,
+                    25,
+                    {
+                        restitution: 2,
+                        friction: 0,
+                        render: {
+                            fillStyle: '#3498db'
+                        }
+                    }
+                );
+                
+                World.add(engine.world, ball);
+            }
+            
+            dragging = null;
+            currentBall = null;
+        }
+
+        function updatePosition(element, touch) {
+            element.style.left = `${touch.clientX - 25}px`;
+            element.style.top = `${touch.clientY - 25}px`;
+        }
+
+        // 响应窗口大小变化
+        window.addEventListener('resize', () => {
+            render.canvas.width = document.getElementById('container').clientWidth;
+            render.canvas.height = document.getElementById('container').clientHeight;
+        });
+    </script>
+</body>
+</html>
